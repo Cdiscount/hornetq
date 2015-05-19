@@ -1,0 +1,2 @@
+/usr/hornetq/bin/run.sh	/usr/bin/hornetq-start
+/usr/hornetq/bin/stop.sh	/usr/bin/hornetq-stop

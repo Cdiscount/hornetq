@@ -1,0 +1,21 @@
+Description: add logorate
+ add logorate
+ .
+ hornetq (2.4.5-1) trusty; urgency=low
+ .
+   * Add logrotate script
+Author: Rémi Buisson <remi.buisson@cdiscount.com>
+
+---
+--- /dev/null
++++ hornetq-2.4.5/logrotate/hornetq
+@@ -0,0 +1,9 @@
++/var/log/hornetq/*.log {
++        daily
++        missingok
++        rotate 7
++        compress
++        notifempty
++	nocreate
++	copytruncate
++}

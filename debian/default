@@ -1,0 +1,5 @@
+# HornetQ: defaults file
+HORNETQ_HOME="/etc/hornetq"
+HORNETQ_LIB="/usr/share/hornetq"
+HORNETQ_TYPE="stand-alone/non-clustered"
+CLUSTER_PROPS="-Dlogs.dir=/var/log/hornetq/ -Ddata.dir=/var/lib/hornetq/"

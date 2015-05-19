@@ -1,0 +1,7 @@
+bin/run.sh	/usr/hornetq/bin
+bin/stop.sh	/usr/hornetq/bin
+bin/lib/*	/usr/lib/hornetq
+lib/*	/usr/share/hornetq/lib
+schema/*	/usr/share/hornetq/schemas
+config/*	/etc/hornetq/config
+logrotate/hornetq	/etc/logrotate.d

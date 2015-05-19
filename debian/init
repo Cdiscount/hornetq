@@ -1,0 +1,138 @@
+#!/bin/sh -e
+#
+# script for starting/stopping the HornetQ standalone server
+#
+### BEGIN INIT INFO
+# Provides:          hornetq
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start daemon at boot time
+# Description:       Enable service provided by daemon.
+### END INIT INFO
+
+# Using the lsb functions to perform the operations.
+. /lib/lsb/init-functions
+
+NAME=hornetq
+DAEMON=/usr/bin/java
+PIDFILE=/var/run/$NAME.pid
+
+# hornetq specific parameters
+HORNETQ_HOME="/etc/hornetq"
+HORNETQ_LIB="/usr/share/hornetq"
+HORNETQ_TYPE="stand-alone/non-clustered"
+CLUSTER_PROPS="-Dlogs.dir=/var/log/hornetq/ -Ddata.dir=/var/lib/hornetq/"
+JVM_ARGS_EXTRA="-XX:+UseParallelGC -XX:+AggressiveOpts -XX:+UseFastAccessorMethods -Xms512M -Xmx1024M"
+
+
+# source the default file
+[ -f /etc/default/hornetq ] && . /etc/default/hornetq
+
+# compute some environement variables
+CONFIG_DIR=$HORNETQ_HOME/config/$HORNETQ_TYPE
+FILENAME=hornetq-beans.xml
+
+if [ ! -d $CONFIG_DIR ]; then
+    echo "Configuration directory $CONFIG_DIR doesn't exist" >&2
+    exit 1
+fi
+
+
+RESOLVED_CONFIG_DIR=`cd "$CONFIG_DIR"; pwd`
+CLASSPATH=$RESOLVED_CONFIG_DIR:$HORNETQ_HOME/schemas/
+JVM_ARGS="$CLUSTER_PROPS $JVM_ARGS_EXTRA -Dhornetq.config.dir=$RESOLVED_CONFIG_DIR -Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dlogging.configuration=file://$RESOLVED_CONFIG_DIR/logging.properties -Djava.library.path=/usr/lib/hornetq/linux-i686:/usr/lib/hornetq/linux-x86_64"
+
+for i in `ls $HORNETQ_LIB/lib/*.jar`; do
+    CLASSPATH=$i:$CLASSPATH
+done
+
+do_start() {
+    # Checked the PID file exists and check the actual status of process
+    if [ -e $PIDFILE ]; then
+        status_of_proc -p $PIDFILE $DAEMON "$NAME process" > /dev/null 2>&1 && status="0" || status="$?"
+        # If the status is SUCCESS then don't need to start again.
+        if [ $status = "0" ]; then
+            log_daemon_msg "$NAME is already running"
+            log_end_msg 1
+        fi
+    fi
+
+    # Start the daemon
+    log_daemon_msg "Starting the process" "$NAME"
+    if start-stop-daemon --start --chuid hornetq --quiet --make-pidfile --pidfile $PIDFILE --background --exec $DAEMON -- $JVM_ARGS -classpath $CLASSPATH org.hornetq.integration.bootstrap.HornetQBootstrapServer $FILENAME ; then
+        log_end_msg 0
+    else
+        log_end_msg 1
+    fi    
+}
+
+do_stop () {
+    # Stop the daemon.
+    if [ -e $PIDFILE ]; then
+        status_of_proc -p $PIDFILE $DAEMON "Stoppping the $NAME process" > /dev/null 2>&1 && status="0" || status="$?"
+        if [ "$status" = 0 ]; then
+            su - hornetq -c "touch $CONFIG_DIR/STOP_ME"
+            log_daemon_msg "waiting $NAME process to be stopped"
+            
+            stopped=false
+            # wait only 5 sec because hornet takes up to 30 sec to start
+            for i in $(seq 1 5) ; do
+                echo -n '.'
+                if ! ps -p `cat $PIDFILE` > /dev/null 2>&1 ; then
+                    /bin/rm -rf $PIDFILE
+                    log_daemon_msg "$NAME process stopped"
+                    log_end_msg 0
+                    stopped=true
+                    break
+                fi
+                sleep 1
+            done
+
+            echo ""
+            if ! $stopped ; then
+	        log_daemon_msg "forcing $NAME to stop"
+                log_daemon_msg "forcing $NAME to stop"
+                start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+                /bin/rm -rf $PIDFILE
+                log_daemon_msg "$NAME process stopped"
+                log_end_msg 0 
+            fi
+        fi
+    else
+        log_daemon_msg "$NAME process is not running"
+        log_end_msg 0
+    fi
+}
+
+do_status () {
+    # Check the status of the process.
+    if [ -e $PIDFILE ]; then
+        status_of_proc -p $PIDFILE $DAEMON "$NAME process" && exit 0 || exit $?
+    else
+        log_daemon_msg "$NAME Process is not running"
+        log_end_msg 1
+    fi
+}
+
+case "$1" in
+    start)
+	do_start
+	;;
+    status)
+        do_status
+        ;;
+    stop)
+	do_stop
+	;;
+    force-reload|restart)
+        do_stop
+        do_start
+	;;
+    *)
+	echo "Usage: $0 {status|start|stop|restart}"
+	exit 2
+        ;;
+esac
+

@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -e
+
+# upgrade from 2.4.5
+if [ "x"$2 = "x2.4.5" ]; then
+	exit 0
+fi
+
+case "$1" in
+    configure)
+	USERNAME='hornetq'
+	if [ -x "$(command -v adduser)" ]; then
+		adduser --system $USERNAME --home /var/lib/hornetq --shell /bin/sh > /dev/null || true
+		chown -R $USERNAME: /etc/hornetq /var/log/hornetq /var/lib/hornetq
+  	else
+		echo >&2 "not adding $USERNAME system account because adduser command was not found"
+	fi
+	chmod +x /usr/hornetq/bin/run.sh /usr/hornetq/bin/stop.sh
+    ;;
+
+    *)
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

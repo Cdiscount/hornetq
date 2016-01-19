@@ -1,0 +1,9 @@
+.pc/
+bin/
+config/
+docs/
+examples/
+lib/
+licenses/
+logrotate/
+schema/
